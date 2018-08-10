@@ -2,9 +2,9 @@ package org.miguelho.kmeans
 
 import org.miguelho.kmeans.util.Context
 
-object Main extends App {
+object Main{
 
-  override def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     val ctx = Context.init(args)
   }
 }
