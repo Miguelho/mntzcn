@@ -35,6 +35,50 @@ class ParserTest extends WordSpec {
           val expectedDateISO = "2017-06-05T09:30"
           assert(localDateTime.toString == expectedDateISO)
         }
+
+        "return a valid #day;hour pattern" in {
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+          assert(parsedRow.get.getDayOfWeekAndHour equals "#1;9")
+        }
+
+        "return 9 when asked by the 9th hour of the first day of the week" in {
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.get.getDayOfWeekAndHourIndex == 9)
+        }
+
+        "return 0 when asked by the 00 hour of the first day of the week" in {
+          val date = "05/06/2017-00:30:00.000"
+          val testEvent = s"1665053N;$date;A01"
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.get.getDayOfWeekAndHourIndex == 0)
+        }
+
+        "return 168 when asked by the 23 hour of the last day of the week" in {
+          val date = "09/09/2018-23:30:00.000"
+          val testEvent = s"1665053N;$date;A01"
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.get.getDayOfWeekAndHourIndex == 167)
+        }
+
+        "return 24 when asked by the 00 hour of the second day of the week" in {
+          val date = "04/09/2018-00:30:00.000"
+          val testEvent = s"1665053N;$date;A01"
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.get.getDayOfWeekAndHourIndex == 24)
+        }
+
+        "return 164 when asked by the 20 hour of the last day of the week" in {
+          val date = "09/09/2018-20:30:00.000"
+          val testEvent = s"1665053N;$date;A01"
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.get.getDayOfWeekAndHourIndex == 164)
+        }
+
       }
 
       "parse and return a valid antenna" in {

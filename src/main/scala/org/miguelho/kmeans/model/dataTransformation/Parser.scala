@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.{Column, DataFrame, Dataset, Row}
 import org.miguelho.kmeans.model.{BoundaryBox, Coordinate}
 import org.miguelho.kmeans.util.Context
 
@@ -40,7 +40,9 @@ class Parser extends Serializable {
   }
 
   def parseAntenna(row: Row): Antenna = {
-    Antenna(row.getString(0), row.getString(1).toInt, row.getString(2).toDouble, row.getString(3).toDouble)
+    val values = row.mkString(";").split(";").map(_.trim).toList
+    Antenna(values.head, values(1).toInt,
+      values(2).toDouble, values(3).toDouble)
   }
 
   def parseCity(row: Row): Option[City] = {
@@ -83,6 +85,14 @@ case class TelephoneEvent(clientId: String, date: String,  antennaId: String) ex
   //"2007-12-03T10:15:30"
   def asLocalDateTime(): LocalDateTime = {
     LocalDateTime.parse(date, DateTimeFormatter.ofPattern(pattern))
+  }
+
+  def getDayOfWeekAndHour: String = {
+    s"#${asLocalDateTime().getDayOfWeek.getValue};${asLocalDateTime().getHour}"
+  }
+
+  def getDayOfWeekAndHourIndex: Int = {
+    ( 24 * ( asLocalDateTime().getDayOfWeek.getValue - 1) ) + asLocalDateTime().getHour
   }
 }
 
