@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Column, DataFrame, Dataset, Row}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.miguelho.kmeans.model.{BoundaryBox, Coordinate}
 import org.miguelho.kmeans.util.Context
 
@@ -32,11 +32,21 @@ class Parser extends Serializable {
   }
 
   def parseTelephoneEventRows(row: Row): Option[TelephoneEvent] = {
-    val values = row.mkString(";").split(";").map(_.trim).toList
+    val separator = ";"
+    val datePattern = raw"(\d{7}[A-Z]{1})$separator(\d{2}).*(\d{2}).*(\d{4})-(\d{2}):(\d{2}):(\d{2})\.(\d{3})$separator(A\d{2})".r
+
+    def prepareEvent(raw: String): TelephoneEvent = {
+      raw.trim match {
+        case datePattern(clientId,day,month,year,hour,minutes,seconds,ms,antennaId) =>
+          TelephoneEvent(clientId, s"$day/$month/$year-$hour:$minutes:$seconds.$ms", antennaId)
+      }
+    }
+    val values = row.mkString(separator)
+
     if (values.isEmpty)
       None
     else
-      Some(TelephoneEvent(values.head,values(1),values(2)))
+      Some(prepareEvent(values))
   }
 
   def parseAntenna(row: Row): Antenna = {

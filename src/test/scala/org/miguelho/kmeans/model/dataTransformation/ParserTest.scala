@@ -78,6 +78,14 @@ class ParserTest extends WordSpec {
 
           assert(parsedRow.get.getDayOfWeekAndHourIndex == 164)
         }
+        //1665060U;05-06-/2017-09:30:00.000;A01
+        "cleanUp should filter invalid characters in the DATEPATTERN" in {
+          val date = "05-06-/2017-09:30:00.000"
+          val testEvent = s"1665053N;$date;A01"
+          val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
+
+          assert(parsedRow.isDefined)
+        }
 
       }
 
