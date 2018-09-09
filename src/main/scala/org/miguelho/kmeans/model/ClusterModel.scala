@@ -35,7 +35,16 @@ class ClusterModel {
     collect
   }
 
-  def extractFeatures(rdd: RDD[Client])(implicit ctx: Context): RDD[(String, Vector)] = ???
+  def extractFeatures(events: RDD[TelephoneEvent])(implicit ctx: Context): RDD[((String, String), List[Double])] = {
+    events.groupBy(event => (event.clientId, event.antennaId)).
+      flatMapValues(list =>
+        list.map(evnt => evnt.getDayOfWeekAndHourIndex)).
+      groupByKey.
+      mapValues(t => List.tabulate(168)( i => {
+        if(t.toSeq.contains(i)) 1.0 else 0.0
+      })).
+      mapValues(iterable => iterable.toList)
+  }
 
   def doClustering(vectors: Vector): Unit = ???
 
