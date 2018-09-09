@@ -41,7 +41,7 @@ class ClusterModel {
         list.map(evnt => evnt.getDayOfWeekAndHourIndex)).
       groupByKey.
       mapValues(t => List.tabulate(168)( i => {
-        if(t.toSeq.contains(i)) 1.0 else 0.0
+        if(t.toSeq.contains(i)) Activity else Inactivity
       })).
       mapValues(iterable => iterable.toList)
   }
