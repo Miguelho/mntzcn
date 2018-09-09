@@ -21,7 +21,11 @@ object Context extends Serializable with Spark {
     val metaConf = MetaConfiguration("dd/MM/yyyy-HH:mm:ss.SSS",//date pattern
       Events(dataModel))
 
+    noLogs()
 
     Context(Configuration(metaConf),spark)
   }
+
+  def noLogs(): Unit = spark.sparkContext.setLogLevel("ERROR")
+
 }
