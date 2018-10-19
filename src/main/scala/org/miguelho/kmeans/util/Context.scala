@@ -1,10 +1,11 @@
 package org.miguelho.kmeans.util
 
 import org.apache.spark.sql.SparkSession
+import org.miguelho.kmeans.model.dataTransformation.Parser
 
-case class Context(configuration: Configuration, sparkSession: SparkSession)
+case class Context(configuration: Configuration, sparkSession: SparkSession, parser: Parser)
 
-object Context extends Serializable with Spark {
+object Context extends Serializable with Spark with ParserTrait {
 
   def init(args: Array[String]): Context = {
     println("Initialize Context")
@@ -23,7 +24,7 @@ object Context extends Serializable with Spark {
 
     noLogs()
 
-    Context(Configuration(metaConf),spark)
+    Context(Configuration(metaConf),spark, parser)
   }
 
   def noLogs(): Unit = spark.sparkContext.setLogLevel("ERROR")

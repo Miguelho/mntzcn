@@ -1,8 +1,8 @@
 package org.miguelho.kmeans.model
 
+import org.apache.spark.mllib.clustering.KMeansModel
 import org.apache.spark.rdd.RDD
 import org.junit.runner.RunWith
-import org.miguelho.kmeans.model.dataTransformation.{DataReader, Parser}
 import org.miguelho.kmeans.model.dataTransformation.{Antenna, DataReader, Parser, TelephoneEvent}
 import org.miguelho.kmeans.util.Fixture
 import org.scalatest.junit.JUnitRunner
@@ -35,11 +35,16 @@ class ClusterModelTest extends Fixture{
       df.show()
     }
 
-    "extract features method should apply oneHotEncoder " in {
-      intercept[NotImplementedError]{
-        cut.extractFeatures(parser.parseClients(DataReader.load("clients")))
-      }
+    /*"doClustering should return a KMeansModel" in {
+      val model = cut.doClustering(cut.extractFeatures(events))
 
+      assert(model.isInstanceOf[KMeansModel])
+      assert( model.clusterCenters.length == 2)
+      println(model.clusterCenters.mkString)
+    }*/
+
+    "ClusterModel should predict events" in {
+      cut.process
     }
 
 
