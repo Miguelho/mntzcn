@@ -1,14 +1,21 @@
 package org.miguelho.kmeans.model
 
-import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
+import org.apache.spark.ml.evaluation.ClusteringEvaluator
+import org.apache.spark.ml.linalg
+import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.mllib.linalg.distributed.RowMatrix
+import org.apache.spark.mllib.stat.Statistics
 import org.miguelho.kmeans.model.dataTransformation._
 import org.miguelho.kmeans.util.Context
-import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Dataset, Encoders, Row}
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.miguelho.kmeans._
 
-case class JoinedRow(clientId: String, antennaId: String, K: Int, age: Int, gender: String, nat: String, civil: String, socioEco:String)
+case class JoinedRow(clientId: String, antennaId: String, K: Int, age: Int, gender: String, nat: String, civil: String, socioEco:String){
+  override def toString: String = s"$clientId,$antennaId,$K,$age,$gender,$nat,$civil,$socioEco"
+}
 
 class ClusterModel extends Serializable {
 
@@ -17,11 +24,10 @@ class ClusterModel extends Serializable {
 
     val events = ctx.parser.parseTelephoneEvents(DataReader.load("events"))
 
+    val Array(train, validation) = events.randomSplit(Array[Double](0.8d,0.2d), 1)
 
-    val Array(train, test) = events.randomSplit(Array[Double](0.8d,0.2d), 1)
-
-    //Feaute extraction
-    val preparedEvents = extractFeatures(train)
+    //Feature extraction
+    val preparedEvents = extractFeatures(train).cache
 
     //Clustering model
     val model = trainModel(preparedEvents)
@@ -32,34 +38,41 @@ class ClusterModel extends Serializable {
     println("******")
 
     //Prediction
-    val predictions = extractFeatures(test).
+    /*val predictions = extractFeatures(test).
       mapValues( l => Vectors.dense(l.toArray)).
-      mapValues( v => model.predict(v))
-
-    predictions.foreach(t => println(t))
-
+      mapValues( v => model.predict(v))*/
+    println(model.summary)
+    val validationDS = extractFeatures(validation)
+    val predictions: Dataset[Example] = model.transform(validationDS).as[Example]
 
     //ClientId;Age;Gender;Nationality;CivilStatus;SocioeconomicLevel
-    val clientsDF = ctx.parser.
-      parseClients(DataReader.load("clients")).
-      toDF("clientId","age","gender","nationality","civilStatus","socioeconomicLevel")
-
-    // Split tuple, join in with Clients DF, groupBy X ...
-    val processed = predictions.
-      map(tuple => (tuple._1._1, tuple._1._2, tuple._2)).
-      toDF("clientId", "antennaId", "K").
-      join(clientsDF, "clientId").
-      rdd.
-      cache()
+    val clientsDS = ctx.parser.
+      parseClients(DataReader.load("clients")).toDS()
 
     def parseJoinRow( r: Row): JoinedRow = {
-      JoinedRow(r.getString(0), r.getString(1), r.getInt(2), r.getInt(3), r.getString(4), r.getString(5), r.getString(6),r.getString(7))
+      JoinedRow(r.getString(0), r.getString(1), r.getInt(3), r.getInt(4), r.getString(5), r.getString(6), r.getString(7),r.getString(8))
     }
 
-    // Group clusters by nationality
-    processed.map(parseJoinRow).
-      groupBy(r => (r.nat,r.K)).
-      foreach( println )
+
+    // Split tuple, join in with Clients DF, groupBy X, convert to JoinedRow
+    val predictionsWithclients = predictions.
+      join(clientsDS, "clientId").
+      rdd.
+      cache().map(parseJoinRow).toDS()
+
+    val folder = "today"
+
+    predictionsWithclients.toText.saveAsTextFile(s"/Users/miguelhalysortuno/Documents/Master/TFM/data/kmeans/output/$folder")
+
+    // Evaluate clustering by computing Silhouette score
+    val evaluator = new ClusteringEvaluator()
+
+    val silhouette = evaluator.evaluate(predictions)
+    println(s"Silhouette with squared euclidean distance = $silhouette")
+
+    // Shows the result.
+    println("Cluster Centers: ")
+    model.clusterCenters.foreach(println)
 
   }
 
@@ -80,7 +93,9 @@ class ClusterModel extends Serializable {
     collect
   }
 
-  def extractFeatures(events: RDD[TelephoneEvent])(implicit ctx: Context): RDD[((String, String), List[Double])] = {
+  def extractFeatures(events: RDD[TelephoneEvent])(implicit ctx: Context): Dataset[Sample] = {
+    import ctx.sparkSession.implicits._
+
     events.groupBy(event => (event.clientId, event.antennaId)).
       flatMapValues(list =>
         list.map(evnt => evnt.getDayOfWeekAndHourIndex)).
@@ -88,13 +103,22 @@ class ClusterModel extends Serializable {
       mapValues(t => List.tabulate(168)( i => {
         if(t.toSeq.contains(i)) Activity else Inactivity
       })).
-      mapValues(iterable => iterable.toList)
+      mapValues(iterable => iterable).map(s => Sample(s._1._1, s._1._2, Vectors.dense(s._2.toArray))).toDS
   }
 
-  def trainModel(vectors: RDD[((String, String), List[Double])])(implicit ctx: Context): KMeansModel = {
-    val features: RDD[Vector] = vectors.map(s => Vectors.dense(s._2.toArray)).cache()
-    KMeans.train(data = features, k = 2, maxIterations = 10 )
+  def trainModel(vectors: Dataset[Sample])(implicit ctx: Context): KMeansModel = {
+    new KMeans().setK(2).fit(vectors)
   }
+  implicit val encoder: ExpressionEncoder[Sample] = ExpressionEncoder[Sample]
+  implicit val encoder2: ExpressionEncoder[Example] = ExpressionEncoder[Example]
 
-
+  implicit class PostProcess(dataset: Dataset[_]){
+    def toText: RDD[String] = {
+      implicit val encoder: ExpressionEncoder[String] =  ExpressionEncoder[String]
+      dataset.map( joinedRow => joinedRow.toString).coalesce(1).rdd
+    }
+  }
 }
+
+case class Sample(clientId: String, antennaId: String, features: org.apache.spark.ml.linalg.Vector)
+case class Example(clientId: String, antennaId: String, features: org.apache.spark.ml.linalg.Vector, prediction: Int)
