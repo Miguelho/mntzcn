@@ -2,13 +2,13 @@ package org.miguelho.kmeans.model.dataTransformation
 
 import org.apache.spark.sql.Row
 import org.junit.runner.RunWith
-import org.miguelho.kmeans.model.{BoundaryBox, Coordinate}
+import org.miguelho.kmeans.model.{Coordinate, TelephoneEvent, Antenna, Client, City}
 import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 
 
 @RunWith(classOf[JUnitRunner])
-class ParserTest extends WordSpec {
+class ParserTest extends ContextSpecification {
 
   val cut: Parser = new Parser
 
@@ -103,16 +103,34 @@ class ParserTest extends WordSpec {
 
       //Madrid;3165541;-3.7906265259,40.3530853269;-3.5769081116,40.3530853269;-3.5769081116,40.5349377098;-3.7906265259,40.5349377098;-3.7906265259,40.3530853269
       "An antenna in Madrid should evaluate its method 'isIn' to True given the Madrid BoundaryBox" in {
-        val antenna = Antenna("A01",100,-3.710762d,40.425788)
+        val antenna = Antenna("A01",100,-3.710762d,40.425788d)
         val madrid = City("Madrid",3165541,Coordinate(-3.7906265259,40.3530853269),Coordinate(-3.5769081116,40.3530853269),Coordinate(-3.5769081116,40.5349377098), Coordinate(-3.7906265259,40.5349377098),Coordinate(-3.7906265259,40.3530853269))
         assert(antenna isIn madrid.toBoundaryBox)
       }
 
       "An antenna in Madrid should evaluate its method 'isIn' to false given the Logroño BoundaryBox" in {
-        val antenna = Antenna("A01",100,-3.710762d,40.425788)
+        val antenna = Antenna("A01",100,-3.710762d,40.425788d)
         val logrono = cut.parseCity(Row.fromSeq(testCity2.split(";"))).get
         assert( !(antenna isIn logrono.toBoundaryBox) )
       }
+
+      "return the right output header" in {
+        import ctx.sparkSession.implicits._
+        import Parser._
+
+        val expectedHeader = "clientId,date,antennaId"
+        val testEvents: Seq[String] = Seq("1665053N;03/09/2018-09:30:00.000;A01",
+          "1665053N;03/09/2018-00:30:00.000;A01",
+          "1665053N;03/09/2018-23:30:00.000;A01"
+        )
+        val rawDf = ctx.sparkSession.sparkContext.parallelize(testEvents).toDF
+        val rdd = cut.parseTelephoneEvents(rawDf).toDS().toText
+
+        val actualHeader=rdd.collect()(0)
+        print(actualHeader)
+        assert(actualHeader.equals(expectedHeader))
+      }
     }
+
 
 }
