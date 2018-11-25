@@ -3,6 +3,8 @@ package org.miguelho.kmeans
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+
 package object model {
 
   /**
@@ -68,4 +70,23 @@ package object model {
     * */
   case class Client(clientId: String, age: Int, gender: String, nationality: String, civilStatus: String, socioeconomicLevel: String)
 
+  case class BoundaryBox(head: Coordinate, tail: Coordinate*) {
+    val points: List[Coordinate] = List(head) ++ tail
+  }
+
+  case class Coordinate(long: Double, lat: Double)
+
+  val Activity: Double = 1.0d
+  val Inactivity: Double = 0.0d
+
+  case class Sample(clientId: String, antennaId: String, features: org.apache.spark.ml.linalg.Vector)
+  case class Example(clientId: String, antennaId: String, features: org.apache.spark.ml.linalg.Vector, prediction: Int)
+
+  implicit object implicits{
+    implicit val eventEncoder: ExpressionEncoder[TelephoneEvent] = ExpressionEncoder[TelephoneEvent]
+    implicit val sampleEncoder: ExpressionEncoder[Sample] = ExpressionEncoder[Sample]
+    implicit val exampleEncoder: ExpressionEncoder[Example] = ExpressionEncoder[Example]
+  }
+
 }
+

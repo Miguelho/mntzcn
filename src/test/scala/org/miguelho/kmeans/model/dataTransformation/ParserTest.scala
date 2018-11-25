@@ -2,7 +2,8 @@ package org.miguelho.kmeans.model.dataTransformation
 
 import org.apache.spark.sql.Row
 import org.junit.runner.RunWith
-import org.miguelho.kmeans.model.{Coordinate, TelephoneEvent, Antenna, Client, City}
+import org.miguelho.kmeans.model.{Antenna, City, Client, Coordinate, TelephoneEvent}
+import org.miguelho.kmeans.util.ContextSpecification
 import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 
