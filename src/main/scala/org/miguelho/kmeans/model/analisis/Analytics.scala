@@ -8,7 +8,7 @@ object Analytics extends Analytics {
 
   /**
   *
-    * Prints a matrix with the real labels as rows and custer number as columns
+    * Prints a matrix with the real labels as rows and cluster number as columns
   * */
   def printContingency(df:org.apache.spark.sql.DataFrame, labels:Seq[Int])
   {
