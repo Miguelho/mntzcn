@@ -9,13 +9,10 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class MainTest extends Fixture {
 
-  "Main should start up" in {
-    val cmdArgs = Array("utad")
+  "Main should run mntzcn" in {
+    val cmdArgs = Array("utad", "/Users/miguelhalysortuno/Documents/Master/TFM/data/kmeans/output")
 
     Main.main(cmdArgs)
   }
 
-  "Main should predict events" in {
-    Main.process
-  }
 }

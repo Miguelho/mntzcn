@@ -1,22 +1,24 @@
 package org.miguelho.kmeans.model
 
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
 import org.apache.spark.ml.evaluation.ClusteringEvaluator
 import org.miguelho.kmeans.model.dataTransformation._
 import org.miguelho.kmeans.util.Context
 import org.apache.spark.sql.{Dataset, Row}
-import org.miguelho.kmeans.model.Example
 import org.miguelho.kmeans.model.analisis.Analytics.{averageSquareRootDistance, printAntennaActivityComparision, printContingency}
 import org.miguelho.kmeans.model.clustering.MntzcnEstimator
-import org.miguelho.kmeans.util.io.Storage.save
 import org.miguelho.kmeans.model.implicits._
+import org.miguelho.kmeans.util.io.{HDFSStorage, Storage}
 
 case class JoinedRow(clientId: String, antennaId: String, K: Int, age: Int, gender: String, nat: String, civil: String, socioEco:String){
   override def toString: String = s"$clientId,$antennaId,$K,$age,$gender,$nat,$civil,$socioEco"
 }
 
-trait ProcessComponent{
+trait ProcessComponent extends Serializable {
+  val mntzcn: Engine
+}
+
+class Engine extends Serializable {
+
   def process(implicit ctx: Context): Unit = {
     import ctx.sparkSession.implicits._
 
@@ -51,7 +53,9 @@ trait ProcessComponent{
       rdd.
       cache().map(parseJoinRow).toDS()
 
-    save(predictionsWithclients, ctx.commandLineArguments.output, "today")
+    HDFSStorage.save(predictionsWithclients,
+      path = ctx.commandLineArguments.output,
+      folder = "today")
 
     // Evaluate clustering by computing Silhouette score
     val evaluator = new ClusteringEvaluator()
