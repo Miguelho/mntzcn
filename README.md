@@ -3,6 +3,8 @@
 This project sets up a Big Data platform to analyze phone events in order to get insights on how users can be grouped 
 into n clusters of users-alike. 
 
+The infrastructure for this project can be found in the following repo: https://github.com/Miguelho/mntzcn_devops
+
 ## Inspiration
 This project is merely for academic purposes and it is not intended to be a profitable  nor commercially attractive one.
 
