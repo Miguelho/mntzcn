@@ -1,4 +1,5 @@
 import ProjectBuild.project._
+import sbt.Keys.libraryDependencies
 
 scalaVersion := "2.11.12"
 
@@ -12,15 +13,22 @@ resolvers ++= {
   )
 }
 
-libraryDependencies += "junit" % "junit" % "4.10" % Test
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.0",
-  "org.apache.spark" %% "spark-sql" % "2.3.0",
-  "org.apache.spark" %% "spark-mllib" % "2.3.0",
-  "joda-time" % "joda-time" % "2.10"
+lazy val dependenciesSettings = {
+  val sparkVersion = "2.3.0"
+  val sparkModules = Seq("core", "mllib", "hive")
 
-)
+  def sparkString2SbtModule(s: String, sparkVersion: String): sbt.ModuleID = {
+    val moduleName = "spark-"+ s
+    "org.apache.spark" %% moduleName % sparkVersion % "provided"
+  }
 
-lazy val mntzn = (project in file(".")).settings(buildSettings)
+  Seq(
+    libraryDependencies ++= sparkModules.map(m => sparkString2SbtModule(m, sparkVersion)),
+    libraryDependencies += "joda-time" % "joda-time" % "2.10",
+    libraryDependencies += "junit" % "junit" % "4.10" % Test,
+    libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5" % Test,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test
+  )
+}
+
+lazy val mntzn = (project in file(".")).settings(buildSettings).settings(assemblySettings).settings(dependenciesSettings)
