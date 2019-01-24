@@ -7,8 +7,8 @@ class DataReaderTest extends Fixture {
   val cut: DataReader.type = DataReader
   "DataReader " should {
 
-    "return a dataframe holding the events information" in {
-      val antennas = cut.load("events").collect()
+    "return a dataframe holding the antennas information" in {
+      val antennas = cut.load(DataReader.TableNames.antenna).collect()
       assert(antennas != null)
     }
 

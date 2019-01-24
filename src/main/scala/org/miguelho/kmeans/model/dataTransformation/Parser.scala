@@ -10,15 +10,19 @@ object Parser {
 
   implicit class PostProcess(dataset: Dataset[_]){
 
-    def header: String = dataset.take(1)(0).getClass.getDeclaredFields.map(field => field.getName).mkString(",")
+    def header: String = dataset.take(1)(0).getClass.getDeclaredFields.map(_.getName).mkString(",")
 
     def toText: RDD[String] = {
-      implicit val encoder: ExpressionEncoder[String] =  ExpressionEncoder[String]
-      dataset.sparkSession.sparkContext.parallelize[String](Array[String](header))
-        .union(
-          dataset.map( joinedRow => joinedRow.toString).coalesce(1)
-            .rdd)
-        .coalesce(1)
+      implicit val encoder: ExpressionEncoder[String] = ExpressionEncoder[String]
+      dataset.sparkSession.sparkContext.
+        parallelize[String](Array[String](header)).
+        union(
+          dataset.
+            map( _.toString).
+            coalesce(1).
+            rdd
+        ).
+        coalesce(1)
     }
   }
 }
@@ -50,53 +54,42 @@ class Parser extends Serializable {
     val separator = ";"
     val datePattern = raw"(\d{7}[A-Z]{1})$separator(\d{2}).*(\d{2}).*(\d{4})-(\d{2}):(\d{2}):(\d{2})\.(\d{3})$separator(A\d{2})".r
 
-    def prepareEvent(raw: String): TelephoneEvent = {
-      raw.trim match {
-        case datePattern(clientId,day,month,year,hour,minutes,seconds,ms,antennaId) =>
-          TelephoneEvent(clientId, s"$day/$month/$year-$hour:$minutes:$seconds.$ms", antennaId)
-      }
+    row.mkString(separator).trim match {
+      case datePattern(clientId,day,month,year,hour,minutes,seconds,ms,antennaId) =>
+        Some(TelephoneEvent(clientId, s"$day/$month/$year-$hour:$minutes:$seconds.$ms", antennaId))
+      case _ => None
     }
-    val values = row.mkString(separator)
 
-    if (values.isEmpty)
-      None
-    else
-      Some(prepareEvent(values))
   }
 
   def parseAntenna(row: Row): Antenna = {
-    val values = row.mkString(";").split(";").map(_.trim).toList
-    Antenna(values.head, values(1).toInt,
-      values(2).toDouble, values(3).toDouble)
+    row.mkString(";").split(";").map(_.trim) match {
+      case Array(antennaId, intensity, x, y) =>
+        Antenna(antennaId, intensity.toInt, x.toDouble, y.toDouble)
+    }
   }
 
   def parseCity(row: Row): Option[City] = {
-    val values = row.mkString(";").split(";").map(_.trim).toList
-    val coordinates = values.slice(2, values.size).map( coordinate => toCoordinate(coordinate.split(",")))
-    if (values.isEmpty)
-      None
-    else
-      Some(City(values.head, values(1).toInt,
-        coordinates.head,
-        coordinates(1),
-        coordinates(2),
-        coordinates(3),
-        coordinates(4)
-      ))
-  }
+    def toCoordinate(coordinateAsArray: Array[String]): Coordinate = {
+      Coordinate(coordinateAsArray(0).toDouble,coordinateAsArray(1).toDouble)
+    }
 
-  def toCoordinate(coordinateAsArray: Array[String]): Coordinate = {
-    Coordinate(coordinateAsArray(0).toDouble,coordinateAsArray(1).toDouble)
+    row.mkString(";").split(";").map(_.trim) match {
+      case Array(cityName, population, x1,x2,x3,x4,x5) =>
+        Seq(x1,x2,x3,x4,x5).map(_.split(",")).map(toCoordinate) match {
+          case Seq(c1,c2,c3,c4,c5) =>
+            Some(City(cityName, population.toInt, c1,c2,c3,c4,c5))
+          case _ => None
+        }
+      case _ => None
+    }
   }
 
   def parseClient(row: Row): Option[Client] = {
-    val values = row.mkString(";").split(";").map(_.trim).toList
-    if (values.isEmpty)
-      None
-    else
-      Some(Client(values.head, values(1).toInt,
-        values(2), values(3),
-        values(4), values(5)
-      ))
+    row.mkString(";").split(";").map(_.trim) match {
+      case Array(clientId, age, gender, nationality, civilStatus, socioeconomicLevel) =>
+        Some(Client(clientId, age.toInt, gender, nationality, civilStatus, socioeconomicLevel))
+      case _ => None
+    }
   }
 }

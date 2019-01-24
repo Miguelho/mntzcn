@@ -25,6 +25,7 @@ lazy val dependenciesSettings = {
   Seq(
     libraryDependencies ++= sparkModules.map(m => sparkString2SbtModule(m, sparkVersion)),
     libraryDependencies += "joda-time" % "joda-time" % "2.10",
+    libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
     libraryDependencies += "junit" % "junit" % "4.10" % Test,
     libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % Test

@@ -29,8 +29,8 @@ class ActivityToVector(override val uid: String) extends Transformer with Defaul
     dataset.as(eventEncoder).
       rdd.
       groupBy(event => (event.clientId, event.antennaId)).
-      flatMapValues(list =>
-        list.map(evnt => evnt.getDayOfWeekAndHourIndex)).
+      flatMapValues(
+        _.map(_.getDayOfWeekAndHourIndex)).
       groupByKey.
       mapValues(t => List.tabulate(168)( i => {
         if(t.toSeq.contains(i)) Activity else Inactivity

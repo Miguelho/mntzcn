@@ -4,7 +4,6 @@ import org.apache.spark.sql.Row
 import org.junit.runner.RunWith
 import org.miguelho.kmeans.model.{Antenna, City, Client, Coordinate, TelephoneEvent}
 import org.miguelho.kmeans.util.ContextSpecification
-import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 
 
@@ -20,6 +19,7 @@ class ParserTest extends ContextSpecification {
       val testAntenna = "A01;100;-3.710762;40.425788"
       val testCity = "Madrid;3165541;-3.7906265259,40.3530853269;-3.5769081116,40.3530853269;-3.5769081116,40.5349377098;-3.7906265259,40.5349377098;-3.7906265259,40.3530853269"
       val testCity2 = "Logroño;150876;-2.5417900085,42.4284616342;-2.3403453827,42.4284616342;-2.3403453827,42.5200036645;-2.5417900085,42.5200036645;-2.5417900085,42.4284616342"
+      val testClient = "7893642Q;42;F;UK;Single;Medium"
 
       "parse and" should {
         val parsedRow = cut.parseTelephoneEventRows(Row.fromSeq(testEvent.split(";")))
@@ -90,6 +90,15 @@ class ParserTest extends ContextSpecification {
 
       }
 
+      "parse and return a valid client" in {
+        val parsedClient = cut.parseClient(Row.fromSeq(testClient.split(";")))
+        val expected = Client("7893642Q", 42, "F", "UK", "Single", "Medium")
+        for{
+          i <- parsedClient
+        } yield assert(expected == i)
+
+      }
+
       "parse and return a valid antenna" in {
         val expected = Antenna("A01",100,-3.710762d,40.425788)
         val parsedRow = cut.parseAntenna(Row.fromSeq(testAntenna.split(";")))
@@ -110,10 +119,10 @@ class ParserTest extends ContextSpecification {
       }
 
       "An antenna in Madrid should evaluate its method 'isIn' to false given the Logroño BoundaryBox" in {
-        val antenna = Antenna("A01",100,-3.710762d,40.425788d)
-        val logrono = cut.parseCity(Row.fromSeq(testCity2.split(";"))).get
-        assert( !(antenna isIn logrono.toBoundaryBox) )
-      }
+      val antenna = Antenna("A01",100,-3.710762d,40.425788d)
+      val logrono = cut.parseCity(Row.fromSeq(testCity2.split(";"))).get
+      assert( !(antenna isIn logrono.toBoundaryBox) )
+    }
 
       "return the right output header" in {
         import ctx.sparkSession.implicits._

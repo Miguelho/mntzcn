@@ -13,8 +13,8 @@ import org.scalatest.junit.JUnitRunner
 class ActivityToVectorTest extends Fixture{
 
   val parser = new Parser
-  val events: RDD[TelephoneEvent] = parser.parseTelephoneEvents(DataReader.load("events"))
-  val antennas: RDD[Antenna] = parser.parseAntennas(DataReader.load("antennas"))
+  val events: RDD[TelephoneEvent] = parser.parseTelephoneEvents(DataReader.load(DataReader.TableNames.event))
+  val antennas: RDD[Antenna] = parser.parseAntennas(DataReader.load(DataReader.TableNames.antenna))
 
     "extract features method should produce a tuple of 2 elements, ((clientId -  antennaId), featuresCol)" in {
       import ctx.sparkSession.implicits._

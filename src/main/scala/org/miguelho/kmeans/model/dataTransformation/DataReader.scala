@@ -5,8 +5,17 @@ import org.miguelho.kmeans.util.Context
 
 object DataReader extends DataReaderTrait{
 
-  def load(tableName: String)(implicit ctx: Context): DataFrame = {
-    super.load(ctx.configuration.metaConfiguration.events.dataModel.tables(tableName).location)
+  case class TableName(name: String)
+
+  case object TableNames {
+    val event = TableName("event")
+    val city = TableName("city")
+    val antenna = TableName("antenna")
+    val client = TableName("client")
+  }
+
+  def load(tableName: TableName)(implicit ctx: Context): DataFrame = {
+    super.load(ctx.configuration.metaConfiguration.events.dataModel.tables(tableName.name).location)
   }
 
 }
